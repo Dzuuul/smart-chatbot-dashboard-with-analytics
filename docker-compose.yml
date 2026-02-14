@@ -1,0 +1,50 @@
+services:
+  database:
+    build:
+      context: ./packages/database
+      dockerfile: Dockerfile
+    container_name: smart-chatbot-db
+    ports:
+      - "5417:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-smart_chatbot_dashboard}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: always
+    # Healthcheck memastikan database siap menerima koneksi
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:6.0
+    container_name: smart-chatbot-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-root}
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+    networks:
+      - app-network
+
+# Catatan:
+# Docker Compose secara default TIDAK akan me-recreate container jika tidak ada perubahan config.
+# Jika ingin memaksa untuk tidak me-recreate walau ada perubahan, gunakan command:
+# docker-compose up -d --no-recreate
+
+volumes:
+  postgres-data:
+  mongo-data:
+
+networks:
+  app-network:
+    driver: bridge

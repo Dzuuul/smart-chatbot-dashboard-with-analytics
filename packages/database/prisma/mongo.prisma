@@ -1,0 +1,24 @@
+generator client {
+    provider = "prisma-client"
+    output   = "../generated/prisma-mongo"
+}
+
+datasource db {
+    provider = "mongodb"
+}
+
+model Log {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    level     String
+    message   String
+    meta      Json?
+    timestamp DateTime @default(now())
+}
+
+model AnalyticsEvent {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    eventName String
+    payload   Json?
+    userId    String?
+    createdAt DateTime @default(now())
+}

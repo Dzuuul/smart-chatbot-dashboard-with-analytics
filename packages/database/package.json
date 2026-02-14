@@ -1,0 +1,25 @@
+{
+  "name": "@repo/db",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "db:generate": "prisma generate && prisma generate --config=./prisma.mongo.config.ts",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:mongo:generate": "prisma generate --config=./prisma.mongo.config.ts",
+    "db:mongo:push": "prisma db push --config=./prisma.mongo.config.ts",
+    "db:studio": "prisma studio"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prisma": "^7.3.0",
+    "dotenv": "^16.4.7"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.3.0"
+  }
+}
