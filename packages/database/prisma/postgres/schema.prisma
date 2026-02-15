@@ -1,0 +1,274 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client-postgres"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Enums ---
+
+enum conversation_status {
+  active
+  closed
+  archived
+}
+
+enum conversation_source {
+  whatsapp
+  web
+  api
+}
+
+enum message_sender {
+  user
+  bot
+  admin
+}
+
+enum message_type {
+  text
+  image
+  video
+  audio
+  document
+  location
+  contact
+  button_reply
+  list_reply
+}
+
+enum message_status {
+  pending
+  sent
+  delivered
+  read
+  failed
+}
+
+enum node_type {
+  start
+  message
+  question
+  condition
+  action
+  knowledge_base
+  human_handoff
+  end
+}
+
+enum condition_type {
+  always
+  text_match
+  button_click
+  variable_equals
+  variable_contains
+  expression
+}
+
+// --- Models ---
+
+model roles {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50)
+  description String?
+  permissions Json?    @default("[]")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+
+  users users[]
+
+  @@index([name])
+}
+
+model users {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role_id             Int
+  email               String    @unique @db.VarChar(255)
+  password            String    @db.VarChar(255) // bcrypt hashed
+  name                String    @db.VarChar(255)
+  is_active           Boolean?  @default(true)
+  is_email_verified   Boolean?  @default(false)
+  last_login_at       DateTime?
+  password_changed_at DateTime?
+  created_at          DateTime? @default(now())
+  updated_at          DateTime? @default(now()) @updatedAt
+
+  role roles @relation(fields: [role_id], references: [id], onUpdate: Restrict)
+
+  blocked_contacts       contacts[]      @relation("BlockedBy")
+  assigned_conversations conversations[] @relation("AssignedTo")
+  created_flows          chatbot_flows[]
+
+  @@index([email])
+  @@index([role_id])
+  @@index([is_active])
+}
+
+model contacts {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone_number        String    @unique @db.VarChar(20)
+  name                String?   @db.VarChar(255)
+  whatsapp_name       String?   @db.VarChar(255)
+  profile_picture_url String?
+  is_blocked          Boolean?  @default(false)
+  blocked_reason      String?
+  blocked_at          DateTime?
+  blocked_by          String?   @db.Uuid
+  total_conversations Int?      @default(0)
+  total_messages      Int?      @default(0)
+  last_message_at     DateTime?
+  tags                String[]  @default([])
+  custom_fields       Json?     @default("{}")
+  created_at          DateTime? @default(now())
+  updated_at          DateTime? @default(now()) @updatedAt
+
+  blocker       users?          @relation("BlockedBy", fields: [blocked_by], references: [id])
+  conversations conversations[]
+
+  @@index([phone_number], name: "idx_contacts_phone")
+  @@index([created_at(sort: Desc)])
+  @@index([last_message_at(sort: Desc)])
+  @@index([tags], type: Gin)
+  @@index([is_blocked])
+}
+
+model conversations {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contact_id         String               @db.Uuid
+  status             conversation_status? @default(active)
+  source             conversation_source? @default(whatsapp)
+  started_at         DateTime?            @default(now())
+  ended_at           DateTime?
+  last_message_at    DateTime?
+  message_count      Int?                 @default(0)
+  bot_message_count  Int?                 @default(0)
+  user_message_count Int?                 @default(0)
+  assigned_to        String?              @db.Uuid
+  tags               String[]             @default([])
+  notes              String?
+  created_at         DateTime?            @default(now())
+  updated_at         DateTime?            @default(now()) @updatedAt
+
+  contact  contacts   @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+  assignee users?     @relation("AssignedTo", fields: [assigned_to], references: [id])
+  messages messages[]
+
+  @@index([contact_id])
+  @@index([status])
+  @@index([started_at(sort: Desc)])
+  @@index([last_message_at(sort: Desc)])
+  @@index([assigned_to])
+}
+
+model messages {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversation_id       String          @db.Uuid
+  sender_type           message_sender
+  sender_id             String?         @db.Uuid // UUID of admin if sender_type is admin
+  message_type          message_type?   @default(text)
+  status                message_status? @default(pending)
+  message_text          String?
+  media_url             String?
+  media_mime_type       String?         @db.VarChar(100)
+  meta_message_id       String?         @db.VarChar(255)
+  meta_wamid            String?         @db.VarChar(255)
+  button_payload        Json?
+  list_payload          Json?
+  response_time_ms      Int?
+  processing_started_at DateTime?
+  processing_ended_at   DateTime?
+  error_message         String?
+  retry_count           Int?            @default(0)
+  created_at            DateTime?       @default(now())
+
+  conversation conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id, created_at(sort: Desc)])
+  @@index([created_at(sort: Desc)])
+  @@index([sender_type])
+  @@index([status])
+  @@index([meta_message_id])
+}
+
+model chatbot_flows {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String    @db.VarChar(255)
+  description      String?
+  trigger_keywords String[]
+  priority         Int?      @default(0)
+  is_active        Boolean?  @default(true)
+  version          Int?      @default(1)
+  created_by       String?   @db.Uuid
+  created_at       DateTime? @default(now())
+  updated_at       DateTime? @default(now()) @updatedAt
+
+  creator users?               @relation(fields: [created_by], references: [id])
+  nodes   chatbot_flow_nodes[]
+  edges   chatbot_flow_edges[]
+
+  @@index([is_active])
+  @@index([priority(sort: Desc), created_at(sort: Desc)])
+  @@index([trigger_keywords], type: Gin)
+}
+
+model chatbot_flow_nodes {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chatbot_flow_id String    @db.Uuid
+  node_type       node_type
+  node_key        String    @db.VarChar(100)
+  content         Json      @default("{}")
+  position_x      Int?
+  position_y      Int?
+  created_at      DateTime? @default(now())
+  updated_at      DateTime? @default(now()) @updatedAt
+
+  flow         chatbot_flows        @relation(fields: [chatbot_flow_id], references: [id], onDelete: Cascade)
+  source_edges chatbot_flow_edges[] @relation("SourceNode")
+  target_edges chatbot_flow_edges[] @relation("TargetNode")
+
+  @@unique([chatbot_flow_id, node_key])
+  @@index([chatbot_flow_id])
+  @@index([node_type])
+}
+
+model chatbot_flow_edges {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chatbot_flow_id String          @db.Uuid
+  source_node_id  String          @db.Uuid
+  target_node_id  String          @db.Uuid
+  condition_type  condition_type? @default(always)
+  condition_value Json?
+  priority        Int?            @default(0)
+  created_at      DateTime?       @default(now())
+
+  flow        chatbot_flows      @relation(fields: [chatbot_flow_id], references: [id], onDelete: Cascade)
+  source_node chatbot_flow_nodes @relation("SourceNode", fields: [source_node_id], references: [id], onDelete: Cascade)
+  target_node chatbot_flow_nodes @relation("TargetNode", fields: [target_node_id], references: [id], onDelete: Cascade)
+
+  @@index([source_node_id, priority(sort: Desc)])
+  @@index([target_node_id])
+  @@index([chatbot_flow_id])
+}
+
+model message_metrics {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  metric_date             DateTime  @unique @db.Date
+  total_messages          Int?      @default(0)
+  total_conversations     Int?      @default(0)
+  total_users             Int?      @default(0)
+  user_messages           Int?      @default(0)
+  bot_messages            Int?      @default(0)
+  admin_messages          Int?      @default(0)
+  avg_response_time_ms    Int?
+  median_response_time_ms Int?
+  p95_response_time_ms    Int?
+  successful_matches      Int?      @default(0)
+  fallback_count          Int?      @default(0)
+  messages_by_hour        Json?     @default("{}")
+  created_at              DateTime? @default(now())
+  updated_at              DateTime? @default(now()) @updatedAt
+
+  @@index([metric_date(sort: Desc)])
+}

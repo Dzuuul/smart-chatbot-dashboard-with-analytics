@@ -1,0 +1,192 @@
+generator client {
+    provider = "prisma-client-js"
+    output   = "../../node_modules/@prisma/client-mongo"
+}
+
+datasource db {
+    provider = "mongodb"
+}
+
+// Composite Types
+type KnowledgeBaseMetadata {
+    views         Int       @default(0)
+    lastUsed      DateTime?
+    successRate   Float     @default(0)
+    avgConfidence Float     @default(0)
+}
+
+type RelatedLink {
+    title String
+    url   String
+}
+
+type MatchedKnowledge {
+    knowledgeId String  @db.ObjectId
+    confidence  Float
+    matchType   String
+    matchedText String?
+}
+
+type AlternativeMatch {
+    knowledgeId String @db.ObjectId
+    confidence  Float
+    question    String
+}
+
+type ProcessingStep {
+    step       String
+    durationMs Int
+}
+
+type UserFeedback {
+    helpful    Boolean
+    rating     Int?
+    comment    String?
+    feedbackAt DateTime @default(now())
+}
+
+type SettingValidation {
+    required  Boolean?
+    minLength Int?
+    maxLength Int?
+    pattern   String?
+    enum      Json?
+}
+
+type ChangeHistory {
+    value     Json
+    updatedBy String   @db.ObjectId
+    updatedAt DateTime @default(now())
+    reason    String?
+}
+
+type DateRange {
+    start DateTime
+    end   DateTime
+}
+
+type FlowState {
+    flowId    String   @db.ObjectId
+    flowName  String
+    startedAt DateTime @default(now())
+}
+
+type NodeState {
+    nodeId    String   @db.ObjectId
+    nodeType  String
+    enteredAt DateTime @default(now())
+}
+
+type ContextHistory {
+    nodeId    String   @db.ObjectId
+    timestamp DateTime @default(now())
+    variables Json
+}
+
+// Models
+model KnowledgeBase {
+    id           String                @id @default(auto()) @map("_id") @db.ObjectId
+    question     String                @unique
+    answer       String
+    tags         String[]
+    synonyms     String[]
+    keywords     String[]
+    category     String
+    subcategory  String?
+    priority     Int
+    isActive     Boolean               @default(true)
+    mediaUrl     String?
+    relatedLinks RelatedLink[]
+    metadata     KnowledgeBaseMetadata
+    createdBy    String                @db.ObjectId
+    updatedBy    String?               @db.ObjectId
+    createdAt    DateTime              @default(now())
+    updatedAt    DateTime              @updatedAt
+
+    // PRIMARY: Text search (Note: weights must be applied manually in MongoDB)
+    @@index([question, keywords, synonyms, answer])
+    @@index([category, isActive, priority(sort: Desc)])
+    @@index([tags, isActive])
+    @@index([metadata.views(sort: Desc), metadata.lastUsed(sort: Desc)])
+    @@map("knowledge_base")
+}
+
+model ChatbotResponseLog {
+    id                 String             @id @default(auto()) @map("_id") @db.ObjectId
+    conversationId     String
+    messageId          String
+    contactPhone       String
+    userMessage        String
+    botResponse        String
+    matchedKnowledge   MatchedKnowledge?
+    alternativeMatches AlternativeMatch[]
+    flowId             String?            @db.ObjectId
+    nodeId             String?            @db.ObjectId
+    processingTime     Int
+    processingSteps    ProcessingStep[]
+    userFeedback       UserFeedback?
+    timestamp          DateTime           @default(now())
+    environment        String?
+
+    @@index([conversationId, timestamp(sort: Desc)])
+    @@index([contactPhone, timestamp(sort: Desc)])
+    @@index([matchedKnowledge.knowledgeId, timestamp(sort: Desc)])
+    @@index([processingTime(sort: Desc), timestamp(sort: Desc)])
+    @@index([timestamp(sort: Desc)])
+    @@index([timestamp], map: "ttl_90_days") // expireAfterSeconds: 7776000 must be set manually
+    @@map("chatbot_responses_log")
+}
+
+model ChatbotSettings {
+    id            String             @id @default(auto()) @map("_id") @db.ObjectId
+    key           String             @unique
+    value         Json
+    type          String // text, json, boolean, number, array
+    description   String
+    category      String // general, responses, behavior, integration, features
+    validation    SettingValidation?
+    changeHistory ChangeHistory[]
+    updatedBy     String             @db.ObjectId
+    updatedAt     DateTime           @updatedAt
+    createdAt     DateTime           @default(now())
+
+    @@index([category, key])
+    @@map("chatbot_settings")
+}
+
+model AnalyticsCache {
+    id                String     @id @default(auto()) @map("_id") @db.ObjectId
+    metricType        String
+    date              DateTime? // For daily metrics
+    dateRange         DateRange?
+    data              Json
+    expiresAt         DateTime
+    computedAt        DateTime   @default(now())
+    computationTimeMs Int
+    version           Int        @default(1)
+    createdAt         DateTime   @default(now())
+
+    @@index([metricType, date(sort: Desc)])
+    @@index([expiresAt], map: "ttl_expiration")
+    @@index([metricType, version])
+    @@map("analytics_cache")
+}
+
+model ConversationContext {
+    id             String           @id @default(auto()) @map("_id") @db.ObjectId
+    conversationId String           @unique
+    contactPhone   String
+    currentFlow    FlowState?
+    currentNode    NodeState?
+    variables      Json
+    history        ContextHistory[]
+    sessionStarted DateTime         @default(now())
+    lastActivity   DateTime         @default(now())
+    expiresAt      DateTime
+    createdAt      DateTime         @default(now())
+    updatedAt      DateTime         @updatedAt
+
+    @@index([contactPhone, lastActivity(sort: Desc)])
+    @@index([expiresAt], map: "ttl_24h_inactivity")
+    @@map("conversation_context")
+}

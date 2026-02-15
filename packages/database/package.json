@@ -4,12 +4,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "db:generate": "prisma generate && prisma generate --config=./prisma.mongo.config.ts",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:mongo:generate": "prisma generate --config=./prisma.mongo.config.ts",
-    "db:mongo:push": "prisma db push --config=./prisma.mongo.config.ts",
-    "db:studio": "prisma studio"
+    "db:generate": "bun run db:generate:postgres && bun run db:generate:mongo",
+    "db:generate:postgres": "prisma generate --schema=./prisma/postgres/schema.prisma",
+    "db:generate:mongo": "prisma generate --schema=./prisma/mongo/schema.prisma",
+    "db:push:postgres": "prisma db push --schema=./prisma/postgres/schema.prisma",
+    "db:push:mongo": "prisma db push --schema=./prisma/mongo/schema.prisma",
+    "db:studio:postgres": "prisma studio --schema=./prisma/postgres/schema.prisma",
+    "db:studio:mongo": "prisma studio --schema=./prisma/mongo/schema.prisma"
   },
   "devDependencies": {
     "@types/bun": "latest",
