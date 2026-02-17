@@ -1,5 +1,5 @@
 {
-  "name": "api",
+  "name": "@repo/api",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -16,12 +16,21 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.1.11",
+    "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.11",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.11",
-    "@repo/api": "*",
+    "@types/bcrypt": "^6.0.0",
+    "@types/passport-jwt": "^4.0.1",
+    "bcrypt": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.3",
+    "escape-html": "^1.0.3",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "escape-html": "^1.0.3"
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@jest/globals": "^30.2.0",

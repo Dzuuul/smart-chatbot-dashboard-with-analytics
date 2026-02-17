@@ -1,6 +1,15 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [
+    "**/.env.*local",
+    "$JWT_SECRET",
+    "$JWT_EXPIRATION",
+    "$JWT_REFRESH_SECRET",
+    "$JWT_REFRESH_EXPIRATION",
+    "$DATABASE_URL",
+    "$FRONTEND_URL",
+    "$API_PORT"
+  ],
   "tasks": {
     "dev": {
       "cache": false,
@@ -11,7 +20,11 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "lint": {},
-    "test": {},
-    "test:e2e": {}
+    "test": {
+      "dependsOn": ["build"]
+    },
+    "test:e2e": {
+      "dependsOn": ["build"]
+    }
   }
 }

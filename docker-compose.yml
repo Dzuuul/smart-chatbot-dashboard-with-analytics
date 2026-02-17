@@ -1,15 +1,14 @@
 services:
   database:
+    image: smart-chatbot-postgres:latest
     build:
       context: ./packages/database
-      dockerfile: Dockerfile
-    container_name: smart-chatbot-db
+      dockerfile: Dockerfile.postgres
+    container_name: smart-chatbot-postgres
     ports:
-      - "5417:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-smart_chatbot_dashboard}
+      - "5428:5432"
+    env_file:
+      - ./packages/database/.env
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: always
@@ -23,13 +22,15 @@ services:
       - app-network
 
   mongodb:
-    image: mongo:6.0
+    image: smart-chatbot-mongo:latest
+    build:
+      context: ./packages/database
+      dockerfile: Dockerfile.mongo
     container_name: smart-chatbot-mongo
     ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-root}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-root}
+      - "27028:27017"
+    env_file:
+      - ./packages/database/.env
     volumes:
       - mongo-data:/data/db
     restart: always

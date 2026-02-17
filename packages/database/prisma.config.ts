@@ -16,9 +16,20 @@ export default defineConfig({
       const schemaPath = schemaArg?.split('=')[1] ?? '';
 
       if (schemaPath.includes('mongo')) {
-        return process.env.MONGO_DATABASE_URL || '';
+        const user = process.env.MONGO_INITDB_ROOT_USERNAME;
+        const pass = process.env.MONGO_INITDB_ROOT_PASSWORD;
+        const host = process.env.MONGO_HOST || 'localhost';
+        const port = process.env.MONGO_PORT || '27017';
+        const db = process.env.MONGO_DB || 'smart_chatbot';
+        return `mongodb://${user}:${pass}@${host}:${port}/${db}?authSource=admin`;
       }
-      return process.env.POSTGRES_DATABASE_URL || '';
+
+      const user = process.env.POSTGRES_USER;
+      const pass = process.env.POSTGRES_PASSWORD;
+      const host = process.env.POSTGRES_HOST || 'localhost';
+      const port = process.env.POSTGRES_PORT || '5432';
+      const db = process.env.POSTGRES_DB || 'smart_chatbot';
+      return `postgresql://${user}:${pass}@${host}:${port}/${db}?schema=public`;
     })(),
   },
 });

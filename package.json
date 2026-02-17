@@ -1,9 +1,9 @@
 {
-  "name": "smart_chatbot_dashboard_with_analytics",
+  "name": "smart_chatbot",
   "version": "0.0.0",
   "private": true,
   "description": "",
-  "author": "",
+  "author": "Moh Dzulfikri Maulana",
   "license": "UNLICENSED",
   "scripts": {
     "dev": "turbo run dev",
